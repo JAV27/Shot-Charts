@@ -1,20 +1,48 @@
 from nba_api.stats.endpoints import commonplayerinfo, shotchartdetail
-from nba_api.stats.static import players
+from nba_api.stats.static import players, teams
 import pandas as pd
 import numpy as np
+import json 
 
-players = players.get_players()
+teams = teams.get_teams()
 
-player_info = commonplayerinfo.CommonPlayerInfo(player_id=players[1]['id'])
+team_ids = []
+for i in teams:
+	team_ids.append(i['id'])
 
-sc = shotchartdetail.ShotChartDetail(team_id=0,
-	player_id=201935,
+sc = shotchartdetail.ShotChartDetail(team_id=1610612762,
+	player_id=0,
 	season_nullable='2018-19',
-	season_type_all_star='Regular Season',
+	season_type_all_star='Regular Season',	
     context_measure_simple='FGA')
 
-arr = sc.get_data_frames()[0]
+arr = sc.get_dict()['resultSets'][0]['rowSet']
+print(arr[1])
 
-print("All shots for James Harden in 2018")
-print(arr.iloc[:,17:19])
 
+players = players.get_players()
+player_ids = []
+
+player_info = commonplayerinfo.CommonPlayerInfo(player_id=202399)
+
+for i in players:
+	player_ids.append(i['id'])		
+
+def getRelevant(n):
+	return [n[3],n[5],n[10],n[12],n[14],n[17],n[18]]
+
+total_data = []
+for i in team_ids:
+	sc = shotchartdetail.ShotChartDetail(team_id=i,
+		player_id=0,
+		season_nullable='2018-19',
+		season_type_all_star='Regular Season',	
+		context_measure_simple='FGA')
+
+	arr = sc.get_dict()['resultSets'][0]['rowSet']
+	filtered = map(getRelevant, arr)
+	total_data.append(list(filtered))
+	print(str(i) + " is done!")
+
+with open('shots.json', 'w') as fp:
+    json.dump(total_data, fp)
