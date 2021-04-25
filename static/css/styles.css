@@ -1,0 +1,80 @@
+* {
+	box-sizing: border-box;
+}
+
+header {
+	display: block;
+}
+
+.mb-auto {
+	margin-top: 20px;
+	margin-bottom: 100px !important;
+}
+
+.header-container {
+}
+
+h3 {
+	margin: 0;
+}
+
+.navbar {
+	float: right;
+	padding: 0;
+}
+
+nav .nav-link {
+	font-size: 1.5rem;
+	padding: 0 10px 0 10px;
+	color: black;
+	border-bottom: solid 8px white;
+}
+
+.selected-link {
+	font-weight: bold;
+	border-bottom: solid 8px black !important;
+}
+
+main {
+	display: block;
+}
+
+.form-row {
+	margin-top: 10px;
+}
+
+.form-col {
+	position: relative;
+}
+
+.form-col button {
+	position: absolute;
+	bottom: 0;
+}
+
+.btn-col {
+	padding-right: 12px;
+	display: flex;
+	align-items: center;
+}
+
+.visualize-btn {
+	width: 80%;
+}
+
+#tooltip {
+	z-index: 9999;
+}
+
+#teamInfo h5 {
+	margin-top: 10px;
+}
+
+.average-table {
+	width: 80%;
+}
+
+th, td {
+	font: 1.5rem;
+	padding: 15px 0 15px 0;
+}

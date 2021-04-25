@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<!-- Required meta tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<link rel="icon" href="/static/images/bblogo.png">
+
+	<!-- Bootstrap CSS -->
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+
+	<link rel="stylesheet" href="https://cdn.datatables.net/1.10.22/css/jquery.dataTables.min.css" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.6/css/responsive.dataTables.min.css" crossorigin="anonymous">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+	<title>NBA Shot Chart Visualization</title>
+
+	<style id="plotly.js-style-global"></style><style type="text/css">/* Chart.js */
+@keyframes chartjs-render-animation{from{opacity:.99}to{opacity:1}}.chartjs-render-monitor{animation:chartjs-render-animation 1ms}.chartjs-size-monitor,.chartjs-size-monitor-expand,.chartjs-size-monitor-shrink{position:absolute;direction:ltr;left:0;top:0;right:0;bottom:0;overflow:hidden;pointer-events:none;visibility:hidden;z-index:-1}.chartjs-size-monitor-expand>div{position:absolute;width:1000000px;height:1000000px;left:0;top:0}.chartjs-size-monitor-shrink>div{position:absolute;width:200%;height:200%;left:0;top:0}</style>
+</head>
+
+	<body data-new-gr-c-s-check-loaded="14.1006.0" data-gr-ext-installed="" class="d-flex h-100">
+		<div class="container-fluid">
+			<header class="mb-auto">
+				<div class="container-fluid header-container">
+					<h3 class="float-start">NBA Shot Chart Visualization</h3>
+					<nav class="navbar navbar-expand-lg">
+		      			<a class="nav-link selected-link" href="{{ url_for('handle_team') }}">Visualize Team</a>
+		      			<a class="nav-link" href="{{ url_for('handle_player') }}">Visualize Player</a>
+				  	</nav>
+				</div>
+			</header>
+
+			<main class="bd-content p-5" id="content" role="main">  
+				<div class="container-fluid">
+					<div class="row">
+						<form action="{{ url_for('handle_team') }}" method="POST">
+							<div class="row form-row">
+								<div class="col-4 form-col">
+								    <label for="teamSelect">Select team</label>
+								    <select class="form-control" name="teamSelect" id="teamSelect">
+								    	{% for team in all_teams %}
+								    		<option>{{ team.full_name }} ({{ team.abbreviation }})</option>
+								    	{% endfor %}
+								    </select>
+							  	</div>
+
+							  	<!--
+							    <div class="col form-col">
+								    <label for="playerSelect">Select player</label>
+								    <select class="form-control" name="playerSelect" id="playerSelect">
+								    	{% for player in all_players %}
+								    		<option>{{ player.full_name }}</option>
+								    	{% endfor %}
+								    </select>
+							  	</div>
+							  	-->
+
+							  	<div class="col-3 form-col">
+							  		<label for="timeSelect">Time span</label>
+							  		<select class="form-control" name="timeSelect" id="timeSelect">
+							  			<option selected>Season</option>
+							  			<option>Time Period</option>
+							  		</select>
+							  	</div>
+
+							  	<div class="col-2 form-col mr-auto" id="seasonCol">
+							  		<label for="seasonSelect">Time span</label>
+							  		<select class="form-control" name="seasonSelect" id="seasonSelect">
+							  			<option selected>2020-21 (Current season)</option>
+							  			<option>2019-20</option>
+							  		</select>
+							  	</div>
+
+							  	<div class="col-2 form-col" id="timeStartCol">
+							  		<label for="timeStart">From Date</label>
+							  		<input type="date" class="form-control" name="timeStart" id="timeStart">
+						  		</div>
+
+						  		<div class="col-2 form-col mr-auto" id="timeEndCol">
+							  		<label for="timeEnd">To Date</label>
+							  		<input type="date" class="form-control" name="timeEnd" id="timeEnd">
+						  		</div>
+
+							  	<div class="col-1 form-col btn-col ml-auto">
+							  		<button type="submit" class="btn btn-primary visualize-btn">Visualize</button>
+							  	</div>
+						  	</div>
+
+						  	<div class="row form-row">
+						  		<div class="col-4">
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" name="location" type="checkbox" id="awayCheckbox" value="away" checked>
+										<label class="form-check-label" for="awayCheckbox">Away Game</label>
+									</div>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" name="location" type="checkbox" id="homeCheckbox" value="home" checked>
+										<label class="form-check-label" for="homeCheckbox">Home Game</label>
+									</div>
+								</div>
+								<div class="col-4">
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" name="conference" type="checkbox" id="westCheckbox" value="westOppt" checked>
+										<label class="form-check-label" for="westCheckbox">Western Conference Opponents</label>
+									</div>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" name="conference" type="checkbox" id="eastCheckbox" value="eastOppt" checked>
+										<label class="form-check-label" for="eastCheckbox">Eastern Conference Opponents</label>
+									</div>
+								</div>
+						  	</div>
+						</form>
+					</div>
+
+					<div class="row mt-4">
+						<div class="col-lg-12 col-xl-6 mb-3">
+							<div id="shotChart">
+								<svg width="780" height="650" background-color="#122737">
+									<g id="shotchart">
+										<defs>
+											<pattern id="bg" patternUnits="userSpaceOnUse" width="780" height="650">
+												<img id="image-url" src="{{ url_for('static', filename='court.jpg') }}"  height="650"/>
+											</pattern>
+										</defs>
+									</g>
+								</svg>
+							</div>
+
+							<div id="tooltip" class="hidden">
+								<p id="shotInfo"></p>
+							</div>	
+						</div>
+
+						<div class="col-lg-12 col-xl-6 mb-3">
+							{% if data and data["team_average"] and data["league_average"] %}
+								<div id="teamInfo">
+									<h1>{{ data["team_name"] }} ({{ data["team_abbr"] }})</h1>
+
+									{% if data["time_type"] == "Season" %}
+										<h3>Season {{ data["season"] }}</h3>
+									{% endif %}
+
+									{% if data["time_type"] == "Time Period" %}
+										<h3>From {{ data["date_from"] }} to {{ data["date_to"] }}</h3>
+									{% endif %}
+
+									{% if data["location"] %}
+										<h5>{{ data["location"] }} Games</h5>
+									{% else %}
+										<h5>Home and Away Games</h5>
+									{% endif %}
+
+									{% if data["conference"] %}
+										<h5>{{ data["conference"] }} Conference</h5>
+									{% else %}
+										<h5>East and West Conferences</h5>
+									{% endif %}
+
+									<table class="table average-table">
+										<tr>
+											<th class="text-left">FG-PCT</th>
+											<th class="text-center">{{ data["team_abbr"] }}</th>
+											<th class="text-center">League Average</th>
+										</tr>
+										<tr>
+											<th class="text-left">2-PT</th>
+											<td class="text-center">{{ data["team_average"]["two_point"]["FG_PCT"] }}%</td>
+											<td class="text-center">{{ data["league_average"]["two_point"]["FG_PCT"] }}%</td>
+										</tr>
+										<tr>
+											<th class="text-left">3-PT</th>
+											<td class="text-center">{{ data["team_average"]["three_point"]["FG_PCT"] }}%</td>
+											<td class="text-center">{{ data["league_average"]["three_point"]["FG_PCT"] }}%</td>
+										</tr>
+										<tr>
+											<th class="text-left">Total</th>
+											<td class="text-center">{{ data["team_average"]["total"]["FG_PCT"] }}%</td>
+											<td class="text-center">{{ data["league_average"]["total"]["FG_PCT"] }}%</td>
+										</tr>
+									</table>
+								</div>
+
+								<form id="filterForm">
+									<h3>Filters</h3>
+									<h5><label for="areaRange" class="form-label">Shot Area</label></h5>
+									<input type="range" class="form-range" min="0" max="2" id="areaRange">
+
+									<h5>Quarter(s)</h5>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" name="quarter" type="checkbox" id="inlineCheckbox1" value="1" checked>
+										<label class="form-check-label" for="inlineCheckbox1">First</label>
+									</div>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" name="quarter" type="checkbox" id="inlineCheckbox2" value="2" checked>
+										<label class="form-check-label" for="inlineCheckbox2">Second</label>
+									</div>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" name="quarter" type="checkbox" id="inlineCheckbox3" value="3" checked>
+										<label class="form-check-label" for="inlineCheckbox3">Third</label>
+									</div>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" name="quarter" type="checkbox" id="inlineCheckbox4" value="4" checked>
+										<label class="form-check-label" for="inlineCheckbox4">Fourth</label>
+									</div>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" name="quarter" type="checkbox" id="inlineCheckbox5" value="5" checked>
+										<label class="form-check-label" for="inlineCheckbox5">Overtime</label>
+									</div>
+
+									<h5>Shot Range</h5>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" name="range" type="checkbox" id="inlineCheckbox6" value="Paint" checked>
+										<label class="form-check-label" for="inlineCheckbox6">In the paint (2 points)</label>
+									</div>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" name="range" type="checkbox" id="inlineCheckbox7" value="Midrange" checked>
+										<label class="form-check-label" for="inlineCheckbox7">Mid-range (2 points)</label>
+									</div>
+									<div class="form-check form-check-inline">
+										<input class="form-check-input" name="range" type="checkbox" id="inlineCheckbox8" value="Three" checked>
+										<label class="form-check-label" for="inlineCheckbox8">Over the arc (3 points)</label>
+									</div>
+								</form>
+							{% endif %}
+						</div>
+					</div>
+				</div>
+			</main>
+		</div>
+
+		<!-- JS -->
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0" crossorigin="anonymous"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/0.5.7/chartjs-plugin-annotation.min.js"></script>
+		<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+		<script src="https://cdn.datatables.net/1.10.22/js/jquery.dataTables.min.js"></script>
+		<script src="https://cdn.datatables.net/responsive/2.2.6/js/dataTables.responsive.min.js"></script>
+		<script src="https://d3js.org/d3.v6.min.js"></script>
+
+		<script src="{{ url_for('static', filename='js/index.js') }}"	></script>
+
+		<script>
+			$(function() {
+				let shotsData = {{ data["shot_chart"]|tojson }};
+
+				function loadShotChart(playerData) {
+					var max = { 
+						x: 780, 
+						y: 650
+					};
+					var svg = d3.select("#shotChart").html("");
+					svg = d3.select("#shotChart").append("svg:svg")
+					.attr("width", max.x)
+					.attr("height", max.y)
+					.attr("background-color", "#122737")
+					.append("g")
+					.attr("id", "shotchart");
+
+					var courtUrl = "/court.jpg";
+					svg.append("svg:defs")
+					.append("svg:pattern")
+					.attr("id", "bg")
+					.attr('patternUnits', 'userSpaceOnUse')
+					.attr("width", max.x)
+					.attr("height", max.y)
+					.append("svg:image")
+					.attr("id","image-url")
+					.attr("xlink:href", courtUrl)
+					.attr("width", max.x)
+					.attr("height", max.y);
+					
+					svg.append("rect")
+					.attr("x", "0")
+					.attr("y", "0")
+					.attr("width", max.x)
+					.attr("height", max.y)
+					.attr("fill", "url(#bg)");
+				  
+					var xScale = d3.scaleLinear()
+					.domain([-250, 250])
+					.range([0, 780]);
+				
+					var yScale = d3.scaleLinear()
+					.domain([-1,0, -150])
+					.range([590,589, 371]);
+				
+					var colorValue = function(d) {
+						if(d[10] === "Missed Shot") {
+							return "#8b0000";
+						} else  {
+							return "#013220";
+						}
+					}
+
+					var xValue = function(d) {
+						return xScale(-d[17]);
+					}
+				
+					var yValue = function(d) {
+						return (yScale(-d[18]));
+					}
+
+					var classByShot = function(d) {
+						if(d[10] === "Missed Shot") {
+							return "dot missed";
+						}
+						if(d[10] === "Made Shot") {
+							return "dot made";
+						}
+					}
+
+					var div = d3.select("body").append("div")	
+										    .attr("class", "tooltip")				
+										    .style("opacity", 0);
+					d3.selectAll('dot').remove();
+					var node = svg.selectAll("dot").data(playerData)
+					node.enter()
+					.append("svg:circle")
+					.attr("r", 8)
+					.attr("cx", function(d) { return  xValue(d);})
+					.attr("cy", function(d) { return yValue(d);})
+					.attr("class", function(d) { return classByShot(d);})
+					.style("fill", function(d) { return colorValue(d);})
+					.on("mouseover", function(e, d) {
+						d3.select("#tooltip")			
+							.select("#shotInfo")
+							.html("<span><strong>" + d[4] + "</strong>, " + d[10] + ", Quarter: " + d[7] + ", Distance: " + d[16] + "ft.</span>");
+				   	
+						d3.select("#tooltip").classed("hidden", false);
+				   })
+				   .on("mouseout", function() {
+						d3.select("#tooltip").classed("hidden", true);
+				   });
+				};
+
+				let filteredData = filterShot(shotsData);
+				loadShotChart(filteredData);
+
+				$("input[name='quarter']").on("click", function() {
+					let filteredData = filterShot(shotsData);
+					loadShotChart(filteredData);
+				});
+
+				$("input[name='range']").on("click", function() {
+					let filteredData = filterShot(shotsData);
+					loadShotChart(filteredData);
+				});
+		  	});
+		</script>
+
+		<script>
+		</script>
+	</body>
+</html>
