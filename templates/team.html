@@ -128,7 +128,7 @@
 							</div>
 
 							<div id="tooltip" class="hidden">
-								<p id="shotInfo"></p>
+								<p id="shotInfo">Information</p>
 							</div>	
 						</div>
 
@@ -211,19 +211,29 @@
 									<h5>Shot Range</h5>
 									<div class="form-check form-check-inline">
 										<input class="form-check-input" name="range" type="checkbox" id="inlineCheckbox6" value="Paint" checked>
-										<label class="form-check-label" for="inlineCheckbox6">In the paint (2 points)</label>
+										<label class="form-check-label" for="inlineCheckbox6">In the paint (2-PTS)</label>
 									</div>
 									<div class="form-check form-check-inline">
 										<input class="form-check-input" name="range" type="checkbox" id="inlineCheckbox7" value="Midrange" checked>
-										<label class="form-check-label" for="inlineCheckbox7">Mid-range (2 points)</label>
+										<label class="form-check-label" for="inlineCheckbox7">Mid-range (2-PTS)</label>
 									</div>
 									<div class="form-check form-check-inline">
 										<input class="form-check-input" name="range" type="checkbox" id="inlineCheckbox8" value="Three" checked>
-										<label class="form-check-label" for="inlineCheckbox8">Over the arc (3 points)</label>
+										<label class="form-check-label" for="inlineCheckbox8">Over the arc (3-PTS)</label>
 									</div>
 								</form>
 							{% endif %}
 						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-lg-12 col-xl-4 plot-col" id="twoPointPlot"><div id="twoPointPlotTooltip" class="tooltip-plot hidden"><p><strong>Test 1</strong></p></div></div>
+						<div class="col-lg-12 col-xl-4 plot-col" id="threePointPlot"><div id="threePointPlotTooltip" class="tooltip-plot hidden"><p><strong>Test 2</strong></p></div></div>
+						<div class="col-lg-12 col-xl-4 plot-col" id="totalPointPlot"><div id="totalPointPlotTooltip"class="tooltip-plot hidden"><p><strong>Test 3</strong></p></div></div>
+					</div>
+
+					<div class="row" id="legend">
+
 					</div>
 				</div>
 			</main>
@@ -240,9 +250,42 @@
 		<script src="https://cdn.datatables.net/responsive/2.2.6/js/dataTables.responsive.min.js"></script>
 		<script src="https://d3js.org/d3.v6.min.js"></script>
 
-		<script src="{{ url_for('static', filename='js/index.js') }}"	></script>
+		<script src="{{ url_for('static', filename='js/app.js') }}"	></script>
 
 		<script>
+			const teamConference = {
+				"Atlanta Hawks": "East",
+				"Boston Celtics": "East",
+				"Cleveland Cavaliers": "East",
+				"New Orleans Pelicans": "West",
+				"Chicago Bulls": "East",
+				"Dallas Mavericks": "West",
+				"Denver Nuggets": "West",
+				"Golden State Warriors": "West",
+				"Houston Rockets": "West",
+				"Los Angeles Clippers": "West",
+				"Los Angeles Lakers": "West",
+				"Miami Heat": "East",
+				"Milwaukee Bucks": "East",
+				"Minnesota Timberwolves": "West",
+				"Brooklyn Nets": "East",
+				"New York Knicks": "East",
+				"Orlando Magic": "East",
+				"Indiana Pacers": "East",
+				"Philadelphia 76ers": "East",
+				"Phoenix Suns": "West",
+				"Portland Trail Blazers": "West",
+				"Sacramento Kings": "West",
+				"San Antonio Spurs": "West",
+				"Oklahoma City Thunder": "West",
+				"Toronto Raptors": "East",
+				"Utah Jazz": "West",
+				"Memphis Grizzlies": "West",
+				"Washington Wizards": "East",
+				"Detroit Pistons": "East",
+				"Charlotte Hornets": "East"
+			};
+
 			$(function() {
 				let shotsData = {{ data["shot_chart"]|tojson }};
 
@@ -336,8 +379,7 @@
 				   });
 				};
 
-				let filteredData = filterShot(shotsData);
-				loadShotChart(filteredData);
+				loadShotChart(shotsData);
 
 				$("input[name='quarter']").on("click", function() {
 					let filteredData = filterShot(shotsData);
@@ -348,6 +390,194 @@
 					let filteredData = filterShot(shotsData);
 					loadShotChart(filteredData);
 				});
+
+				function prepareData(teamName, teamAverage, otherAverages) {
+					let data = []; 
+					data.push({
+						name: teamName,
+						average: teamAverage
+					});
+
+					for (let team in otherAverages) {
+						data.push({
+							"name": team,
+							"average": otherAverages[team]
+						})
+					}
+					return data; 
+				}
+
+				function plotAverage(teamName, teamAverage, otherAverages) {
+					const data = prepareData(teamName, teamAverage, otherAverages);
+
+					const margin = {top: 10, right: 30, bottom: 60, left: 45 };
+					const plotWidth = 600;
+					const plotHeight = 400;
+
+					function plotOne(id, key) {
+						const width = plotWidth - margin.left - margin.right;
+    					const height = plotHeight - margin.top - margin.bottom;
+						const svg = d3.select(id)
+								  .append("svg")
+								  .attr("width", plotWidth)
+								  .attr("height", plotHeight)
+								  .append("g")
+								  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+						const xScale = d3.scaleLinear()
+										 .domain([d3.min(data, d => { return d["average"][key]["FGA"] - 200; }), d3.max(data, d => { return d["average"][key]["FGA"] + 200; })])
+										 .range([0, width]);
+
+						const yScale = d3.scaleLinear()
+										 .domain([100, 0])
+										 .range([0, height]);
+
+						// Title
+						let title = "";
+						switch(key) {
+							case "two_point":
+								title = "2-PTS FGA vs. FG PCT Plot";
+								break;
+							case "three_point":
+								title = "3-PTS FGA vs. FG PCT Plot";
+								break;
+							case "total":
+								title = "Total FGA vs. FG PCT Plot";
+								break;
+						}
+						svg.append("text")
+				           .attr("x", (width / 2))             
+				           .attr("y", 0 + (margin.top / 3))
+				           .attr("text-anchor", "middle")  
+				           .style("font-size", "16px")
+				           .style("font-weight", "bold")
+				           .text(title);
+
+						// X-axis
+						svg.append("g")
+						   .attr("transform", "translate(0," + height + ")")
+	    				   .call(d3.axisBottom(xScale));
+
+	    				svg.append("text")
+	    				   .attr("transform",  "translate(" + (width / 2) + " ," + (height + margin.top + 20) + ")")
+      					   .style("text-anchor", "middle")
+      					   .style("font-size", "16px") 
+      					   .style("font-weight", "bold")
+      					   .text("FGA (Number of Shots)");
+						
+						// Y-axis
+	    				svg.append("g")
+	    				   .call(d3.axisLeft(yScale));
+
+					    svg.append("text")
+					       .attr("transform", "rotate(-90)")
+					       .attr("y", 0 - margin.left)
+					       .attr("x", 0 - (height / 2))
+					       .attr("dy", "1em")
+					       .style("text-anchor", "middle")
+					       .style("font-size", "16px") 
+      					   .style("font-weight", "bold")
+					       .text("FG PCT (%)");
+
+	    				svg.append("g")
+	    				   .selectAll("dot")
+	    				   .data(data)
+	    				   .enter()
+	    				   .append("circle")
+	    				   .attr("cx", function (d) { return xScale(d["average"][key]["FGA"]); })
+					       .attr("cy", function (d) { return yScale(d["average"][key]["FG_PCT"]); })
+					       .attr("r", 6)
+       					   .attr("stroke", "black")
+  						   .attr("stroke-width", 1)
+					       .style("fill", function(d) {
+					       		if (d["name"] === teamName) {
+					       			return "#228B22";
+					       		} else {
+					       			if (teamConference[d["name"]] === "West") {
+					       				return "#8B0000";
+					       			} else {
+					       				return "#000099";
+					       			}
+					       		}
+					       })
+					       .on("mouseover", function(event, d) {
+					       		d3.select(this).attr("r", 10);
+
+			   	  	  			const xPosition = parseFloat(d3.select(this).attr("cx"));
+								const yPosition = parseFloat(d3.select(this).attr("cy"));
+								console.log(xPosition, yPosition);
+								d3.select(id + "Tooltip")
+								  .style("left", (xPosition - 40) + "px")
+								  .style("top", (yPosition - 50) + "px")
+								  .html("<strong>" + d["name"] + "</strong><br/>FGA: " + d["average"][key]["FGA"] + "<br/>FGM: " + d["average"][key]["FGM"] + "<br/>FG-PCT: " + d["average"][key]["FG_PCT"] + "%");
+
+						       	d3.select(id + "Tooltip").classed("hidden", false);
+					       })
+					       .on("mouseout", function(event, d) {
+					       		d3.select(this).attr("r", 6);
+
+			   	  	  			d3.select(id + "Tooltip").classed("hidden", true);
+					       })
+
+						const total_fga = data.reduce((acc, elem) => acc + elem["average"][key]["FGA"], 0);
+						const avg_fga = total_fga / data.length;
+						const total_fgm = data.reduce((acc, elem) => acc + elem["average"][key]["FGM"], 0);
+						const avg_pct = total_fgm / total_fga * 100;
+					    
+					    // League average FGA
+					    svg.append("line")
+					       .attr("x1", xScale(avg_fga))
+					       .attr("y1", 0)
+					       .attr("x2", xScale(avg_fga))
+					       .attr("y2", height)
+					       .style("stroke-width", 1)
+						   .style("stroke", "black")
+						   .style("fill", "black");
+
+						svg.append("text")
+						   .attr("transform", "rotate(90)")
+	    				   .attr("y", 0 - xScale(avg_fga) - 5)
+					       .attr("x", 0 + 15)
+      					   .style("text-anchor", "left")
+      					   .style("font-size", "9px")
+      					   .text("average FGA");
+
+						// League average FG-PCT
+						svg.append("line")
+						   .attr("x1", 0)
+						   .attr("y1", yScale(avg_pct))
+						   .attr("x2", width)
+						   .attr("y2", yScale(avg_pct))
+					       .style("stroke-width", 1)
+						   .style("stroke", "black")
+						   .style("fill", "black");
+
+						svg.append("text")
+	    				   .attr("transform",  "translate(" + 15 + " ," + (yScale(avg_pct) - 5) + ")")
+      					   .style("text-anchor", "left")
+      					   .style("font-size", "9px")
+      					   .text("average FG-PCT");
+					}
+
+					plotOne("#twoPointPlot", "two_point");
+					plotOne("#threePointPlot", "three_point");
+					plotOne("#totalPointPlot", "total");
+
+					const legendData = [["#228B22", teamName], ["#8B0000", "Western Conference"], ["#000099", "Eastern Conference"]]
+					const svg = d3.select("#legend")
+								  .append("svg")
+								  .attr("width", plotWidth * 3)
+								  .attr("height", 50);
+
+					svg.append("circle").attr("cx", 650).attr("cy", 25).attr("r", 6).style("fill", "#228B22").attr("stroke", "black").attr("stroke-width", 1);
+					svg.append("circle").attr("cx", 800).attr("cy", 25).attr("r", 6).style("fill", "#8B0000").attr("stroke", "black").attr("stroke-width", 1);
+					svg.append("circle").attr("cx", 1000).attr("cy", 25).attr("r", 6).style("fill", "#000099").attr("stroke", "black").attr("stroke-width", 1);
+					svg.append("text").attr("x", 665).attr("y", 25).text(teamName).style("font-size", "16px").attr("alignment-baseline", "middle");
+					svg.append("text").attr("x", 815).attr("y", 25).text("Western Conference").style("font-size", "16px").attr("alignment-baseline", "middle");
+					svg.append("text").attr("x", 1015).attr("y", 25).text("Eastern Conference").style("font-size", "16px").attr("alignment-baseline", "middle");
+				}
+
+				plotAverage({{ data["team_name"]|tojson }}, {{ data["team_average"]|tojson }}, {{ data["other_averages"]|tojson }});
 		  	});
 		</script>
 

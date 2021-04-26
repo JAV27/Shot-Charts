@@ -35,7 +35,7 @@
 			<main class="bd-content p-5" id="content" role="main">  
 				<div class="container-fluid">
 					<div class="row">
-						<form action="{{ url_for('handle_team') }}" method="POST">
+						<form action="{{ url_for('handle_player') }}" method="POST">
 							<div class="row form-row">
 							    <div class="col-4 form-col">
 								    <label for="playerSelect">Select player</label>
@@ -51,10 +51,13 @@
 							  		<select class="form-control" name="timeSelect" id="timeSelect">
 							  			<option selected>Season</option>
 							  			<option>Time Period</option>
+							  			<option>Career</option>
 							  		</select>
 							  	</div>
 
-							  	<div class="col-2 form-col mr-auto" id="seasonCol">
+							  	<div class="col-2 form-col" id="fillerCol"></div>
+
+							  	<div class="col-2 form-col" id="seasonCol">
 							  		<label for="seasonSelect">Time span</label>
 							  		<select class="form-control" name="seasonSelect" id="seasonSelect">
 							  			<option selected>2020-21 (Current season)</option>
@@ -67,12 +70,12 @@
 							  		<input type="date" class="form-control" name="timeStart" id="timeStart">
 						  		</div>
 
-						  		<div class="col-2 form-col mr-auto" id="timeEndCol">
+						  		<div class="col-2 form-col" id="timeEndCol">
 							  		<label for="timeEnd">To Date</label>
 							  		<input type="date" class="form-control" name="timeEnd" id="timeEnd">
 						  		</div>
 
-							  	<div class="col-1 form-col btn-col ml-auto">
+							  	<div class="col-1 form-col btn-col">
 							  		<button type="submit" class="btn btn-primary visualize-btn">Visualize</button>
 							  	</div>
 						  	</div>
@@ -117,7 +120,7 @@
 							</div>
 
 							<div id="tooltip" class="hidden">
-								<p id="shotInfo"></p>
+								<p id="shotInfo">Information</p>
 							</div>	
 						</div>
 
@@ -200,15 +203,15 @@
 									<h5>Shot Range</h5>
 									<div class="form-check form-check-inline">
 										<input class="form-check-input" name="range" type="checkbox" id="inlineCheckbox6" value="Paint" checked>
-										<label class="form-check-label" for="inlineCheckbox6">In the paint (2 points)</label>
+										<label class="form-check-label" for="inlineCheckbox6">In the paint (2-PTS)</label>
 									</div>
 									<div class="form-check form-check-inline">
 										<input class="form-check-input" name="range" type="checkbox" id="inlineCheckbox7" value="Midrange" checked>
-										<label class="form-check-label" for="inlineCheckbox7">Mid-range (2 points)</label>
+										<label class="form-check-label" for="inlineCheckbox7">Mid-range (2-PTS)</label>
 									</div>
 									<div class="form-check form-check-inline">
 										<input class="form-check-input" name="range" type="checkbox" id="inlineCheckbox8" value="Three" checked>
-										<label class="form-check-label" for="inlineCheckbox8">Over the arc (3 points)</label>
+										<label class="form-check-label" for="inlineCheckbox8">Over the arc (3-PTS)</label>
 									</div>
 								</form>
 							{% endif %}
@@ -229,9 +232,42 @@
 		<script src="https://cdn.datatables.net/responsive/2.2.6/js/dataTables.responsive.min.js"></script>
 		<script src="https://d3js.org/d3.v6.min.js"></script>
 
-		<script src="{{ url_for('static', filename='js/index.js') }}"	></script>
+		<script src="{{ url_for('static', filename='js/app.js') }}"	></script>
 
 		<script>
+			const teamConference = {
+				"Atlanta Hawks": "East",
+				"Boston Celtics": "East",
+				"Cleveland Cavaliers": "East",
+				"New Orleans Pelicans": "West",
+				"Chicago Bulls": "East",
+				"Dallas Mavericks": "West",
+				"Denver Nuggets": "West",
+				"Golden State Warriors": "West",
+				"Houston Rockets": "West",
+				"Los Angeles Clippers": "West",
+				"Los Angeles Lakers": "West",
+				"Miami Heat": "East",
+				"Milwaukee Bucks": "East",
+				"Minnesota Timberwolves": "West",
+				"Brooklyn Nets": "East",
+				"New York Knicks": "East",
+				"Orlando Magic": "East",
+				"Indiana Pacers": "East",
+				"Philadelphia 76ers": "East",
+				"Phoenix Suns": "West",
+				"Portland Trail Blazers": "West",
+				"Sacramento Kings": "West",
+				"San Antonio Spurs": "West",
+				"Oklahoma City Thunder": "West",
+				"Toronto Raptors": "East",
+				"Utah Jazz": "West",
+				"Memphis Grizzlies": "West",
+				"Washington Wizards": "East",
+				"Detroit Pistons": "East",
+				"Charlotte Hornets": "East"
+			};
+
 			$(function() {
 				let shotsData = {{ data["shot_chart"]|tojson }};
 
@@ -325,8 +361,7 @@
 				   });
 				};
 
-				let filteredData = filterShot(shotsData);
-				loadShotChart(filteredData);
+				loadShotChart(shotsData);
 
 				$("input[name='quarter']").on("click", function() {
 					let filteredData = filterShot(shotsData);
@@ -337,6 +372,22 @@
 					let filteredData = filterShot(shotsData);
 					loadShotChart(filteredData);
 				});
+
+				function prepareData(teamName, teamAverage, otherAverages) {
+					let data = []; 
+					data.push({
+						name: teamName,
+						average: teamAverage
+					});
+
+					for (let team in otherAverages) {
+						data.push({
+							"name": team,
+							"average": otherAverages[team]
+						})
+					}
+					return data; 
+				}
 		  	});
 		</script>
 

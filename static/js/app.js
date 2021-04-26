@@ -3,13 +3,21 @@ $("#timeSelect").on("change", function() {
 	switch(timeSpan) {
 	case "Season":
 		$("#seasonCol").show();
+		$("#fillerCol").hide();
 		$("#timeStartCol").hide();
 		$("#timeEndCol").css('visibility', 'hidden');
 		break;
 	case "Time Period":
 		$("#seasonCol").hide();
+		$("#fillerCol").hide();
 		$("#timeStartCol").show();
 		$("#timeEndCol").css('visibility', 'visible');
+		break;
+	case "Career":
+		$("#seasonCol").hide();
+		$("#fillerCol").show();
+		$("#timeStartCol").hide();
+		$("#timeEndCol").css('visibility', 'hidden');
 		break;
 	default:
 		return;
@@ -48,6 +56,7 @@ function filterShot(shotsData) {
 
 $(function() {
 	$("#seasonCol").show();
+	$("#fillerCol").hide();
 	$("#timeStartCol").hide();
 	$("#timeEndCol").css('visibility', 'hidden');
 });

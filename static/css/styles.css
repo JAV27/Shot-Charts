@@ -62,9 +62,27 @@ main {
 	width: 80%;
 }
 
-#tooltip {
-	z-index: 9999;
+.plot-col {
+	position: relative;
 }
+
+.tooltip-plot {
+	position: absolute;
+	width: auto;
+	height: auto;
+	padding: 5px;
+	font: 10px sans-serif;
+	background-color: lightsteelblue;
+	-webkit-border-radius: 10px;
+	-moz-border-radius: 10px;
+	border-radius: 10px;
+	-webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+	-moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+	box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+	pointer-events: none;
+	visibility: visible;
+}
+
 
 #teamInfo h5 {
 	margin-top: 10px;
@@ -77,4 +95,8 @@ main {
 th, td {
 	font: 1.5rem;
 	padding: 15px 0 15px 0;
+}
+
+.hidden {
+	visibility: hidden;
 }

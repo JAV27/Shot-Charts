@@ -29,7 +29,6 @@ player_ids = {
 	player["full_name"]: player["id"] for player in all_players
 }
 
-
 @app.route("/team", methods=["GET", "POST"])
 def handle_team():	
 	if request.method == "GET":
@@ -128,9 +127,8 @@ def handle_player():
 			"conference": None,
 			"player_name": None,
 			"shot_chart": None,
-			"team_average": None,
-			"league_average": None,
-			"other_averages": None
+			"player_average": None,
+			"league_average": None
 		}
 
 	if request.method == "POST":
@@ -145,6 +143,8 @@ def handle_player():
 		elif time_type == "Time Period":
 			date_from = request.form["timeStart"]
 			date_to = request.form["timeEnd"]
+		elif time_type == "Career":
+			pass 
 		else:
 			raise ValueError("Invalid time type")
 
@@ -166,8 +166,7 @@ def handle_player():
 			else:
 				conference = "East"
 
-		team_chart, team_average, league_average, other_averages = get_team_data(
-			team_id=team_id,
+		player_chart, player_average, league_average = get_player_data(
 			player_id=0,
 			date_from=date_from,
 			date_to=date_to,
@@ -189,15 +188,11 @@ def handle_player():
 			"season": season,
 			"location": location if location != LocationNullable.default else None,
 			"conference": conference if conference != ConferenceNullable.default else None,
-			"team_name": team_name,
-			"team_abbr": team_abbr,
-			"shot_chart": team_chart,
-			"team_average": team_average,
-			"league_average": league_average,
-			"other_averages": other_averages	
+			"player_name": player_name,
+			"shot_chart": player_chart,
+			"player_average": player_average,
+			"league_average": league_average
 		}
-
-	return render_template("team.html", all_teams=all_teams, all_players=all_players, data=data)
 
 	return render_template("player.html", all_teams=all_teams, all_players=all_players, data=data)
 
@@ -258,12 +253,12 @@ def get_team_data(
 
 	# Compute other teams' individual averages
 	other_averages = {}
+	count = 0
 	for other_team, other_id in team_ids.items():
 		if other_id == team_id:
 			continue 
 		else:
 			print(other_team)
-			"""
 			other_shot_chart = shotchartdetail.ShotChartDetail(
 				team_id=other_id,
 				player_id=player_id,
@@ -276,9 +271,72 @@ def get_team_data(
 				context_measure_simple=context_measure_simple
 			) 
 			other_averages[other_team] = get_team_average(convert_to_df(other_shot_chart.get_dict()["resultSets"][0]))
-			"""
+
+			count += 1
+			if count == 10:
+				break
 
 	return shot_array, team_average, league_average, other_averages
+
+
+def get_player_data( 
+	player_id=0, 
+	date_from="", 
+	date_to="", 
+	season=SeasonNullable.default,
+	season_type="Regular Season",
+	location=LocationNullable.default,
+	vs_conference=ConferenceNullable.default,
+	context_measure_simple="FGA"
+	):
+	"""
+	0 GRID_TYPE
+	1 GAME_ID
+	2 GAME_EVENT_ID
+	3 PLAYER_ID
+	4 PLAYER_NAME
+	5 TEAM_ID
+	6 TEAM_NAME
+	7 PERIOD
+	8 MINUTES_REMAINING
+	9 SECONDS_REMAINING
+	10 EVENT_TYPE
+	11 ACTION_TYPE
+	12 SHOT_TYPE
+	13 SHOT_ZONE_BASIC
+	14 SHOT_ZONE_AREA
+	15 SHOT_ZONE_RANGE
+	16 SHOT_DISTANCE
+	17 LOC_X
+	18 LOC_Y
+	19 SHOT_ATTEMPTED_FLAG 
+	20 SHOT_MADE_FLAG
+	21 GAME_DATE
+	22 HTM
+	23 VTM
+	"""
+	shot_array = [] 
+	for team in all_teams:
+		curr_shot_chart = shotchartdetail.ShotChartDetail(
+			team_id=team["id"],
+			player_id=player_id,
+			date_from_nullable=date_from, 
+			date_to_nullable=date_to,
+			season_nullable=season,
+			season_type_all_star=season_type,
+			location_nullable=location,
+			vs_conference_nullable=vs_conference,
+			context_measure_simple=context_measure_simple
+		) 
+		curr_shot_array = curr_shot_chart.get_dict()["resultSets"][0]["rowSet"]
+		shot_array.extend(curr_shot_array)
+
+	# Compute team average 
+	player_average = get_team_average(convert_to_df(shot_chart.get_dict()["resultSets"][0], curr_shot_chart()["resultSets"][0]["headers"]))
+	# Compute league average 
+	league_average = get_league_average(convert_to_df(curr_shot_chart.get_dict()["resultSets"][1]))
+
+	return shot_array, player_average, league_average
 
 
 def get_team_average(df):
@@ -331,24 +389,26 @@ def get_league_average(df):
 
 	return {
 		"two_point": {
-			"FGA": two_point_fga,
-			"FGM": two_point_fgm,
-			"FG_PCT": two_point_fg_pcg
+			"FGA": int(two_point_fga),
+			"FGM": int(two_point_fgm),
+			"FG_PCT": float(two_point_fg_pcg)
 		},
 		"three_point": {
-			"FGA": three_point_fga,
-			"FGM": three_point_fgm,
-			"FG_PCT": three_point_fg_pcg
+			"FGA": int(three_point_fga),
+			"FGM": int(three_point_fgm),
+			"FG_PCT": float(three_point_fg_pcg)
 		},
 		"total": {
-			"FGA": total_fga,
-			"FGM": total_fgm,
-			"FG_PCT": total_fg_pcg
+			"FGA": int(total_fga),
+			"FGM": int(total_fgm),
+			"FG_PCT": float(total_fg_pcg)
 		}
 	}
 
-def convert_to_df(data):
-	df = pd.DataFrame(data["rowSet"], columns=data["headers"])
+def convert_to_df(data, headers=None):
+	if headers is None:
+		headers=data["headers"]
+	df = pd.DataFrame(data["rowSet"], columns=headers)
 	return df 
 
 
