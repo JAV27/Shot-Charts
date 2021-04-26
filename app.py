@@ -253,7 +253,6 @@ def get_team_data(
 
 	# Compute other teams' individual averages
 	other_averages = {}
-	count = 0
 	for other_team, other_id in team_ids.items():
 		if other_id == team_id:
 			continue 
@@ -271,10 +270,6 @@ def get_team_data(
 				context_measure_simple=context_measure_simple
 			) 
 			other_averages[other_team] = get_team_average(convert_to_df(other_shot_chart.get_dict()["resultSets"][0]))
-
-			count += 1
-			if count == 10:
-				break
 
 	return shot_array, team_average, league_average, other_averages
 
@@ -413,4 +408,6 @@ def convert_to_df(data, headers=None):
 
 
 if __name__ == "__main__":
+	# player_info = commonplayerinfo.CommonPlayerInfo(player_id=all_players[1]['id'])
+	# print(player_info)
 	app.run(host="0.0.0.0", port=8080)

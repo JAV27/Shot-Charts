@@ -286,10 +286,14 @@
 				"Charlotte Hornets": "East"
 			};
 
+			console.log(d3.interpolateRdYlGn(0.1));
+			console.log(d3.interpolateRdYlGn(0.5));
+			console.log(d3.interpolateRdYlGn(0.9));
+
 			$(function() {
 				let shotsData = {{ data["shot_chart"]|tojson }};
 
-				function loadShotChart(playerData) {
+				function loadShotChartSmall(playerData) {
 					var max = { 
 						x: 780, 
 						y: 650
@@ -379,31 +383,82 @@
 				   });
 				};
 
-				loadShotChart(shotsData);
+				function loadShotChartMedium(playerData) {
+					var max = { 
+						x: 780, 
+						y: 650
+					};
+					var svg = d3.select("#shotChart").html("");
+					svg = d3.select("#shotChart").append("svg:svg")
+					.attr("width", max.x)
+					.attr("height", max.y)
+					.attr("background-color", "#122737")
+					.append("g")
+					.attr("id", "shotchart");
 
+					var courtUrl = "/court.jpg";
+					svg.append("svg:defs")
+					.append("svg:pattern")
+					.attr("id", "bg")
+					.attr('patternUnits', 'userSpaceOnUse')
+					.attr("width", max.x)
+					.attr("height", max.y)
+					.append("svg:image")
+					.attr("id","image-url")
+					.attr("xlink:href", courtUrl)
+					.attr("width", max.x)
+					.attr("height", max.y);
+					
+					svg.append("rect")
+					.attr("x", "0")
+					.attr("y", "0")
+					.attr("width", max.x)
+					.attr("height", max.y)
+					.attr("fill", "url(#bg)");
+
+					svg.append("rect")
+					   .attr("x", 4)
+					   .attr("y", 455)
+					   .attr("width", 46)
+					   .attr("height", max.y - 455 - 4)
+					   .style("fill", "red");
+
+					svg.append("rect")
+					   .attr("x", max.x - 51)
+					   .attr("y", 455)
+					   .attr("width", 46)
+					   .attr("height", max.y - 455 - 4)
+					   .style("fill", "blue");
+
+					const outPoints = [[]]
+				};
+
+				loadShotChartSmall(shotsData);
+
+				let filterData = shotsData;
 				$("input[name='quarter']").on("click", function() {
-					let filteredData = filterShot(shotsData);
-					loadShotChart(filteredData);
+					filteredData = filterShot(shotsData);
+					loadShotChartSmall(filteredData);
 				});
 
 				$("input[name='range']").on("click", function() {
-					let filteredData = filterShot(shotsData);
-					loadShotChart(filteredData);
+					filteredData = filterShot(shotsData);
+					loadShotChartSmall(filteredData);
 				});
 
 				function prepareData(teamName, teamAverage, otherAverages) {
-					let data = []; 
-					data.push({
-						name: teamName,
-						average: teamAverage
-					});
-
+					let data = [];
 					for (let team in otherAverages) {
 						data.push({
 							"name": team,
 							"average": otherAverages[team]
 						})
 					}
+
+					data.push({
+						name: teamName,
+						average: teamAverage
+					});
 					return data; 
 				}
 
