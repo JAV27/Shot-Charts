@@ -14,10 +14,8 @@ import json
 app = Flask(__name__, static_url_path="", template_folder="templates")
 # app._static_folder = os.path.abspath("static")
 
-
 all_teams = teams.get_teams()
 all_players = players.get_active_players()
-
 
 # Map team name to team id 
 team_ids = {
@@ -115,87 +113,6 @@ def handle_team():
 	return render_template("team.html", all_teams=all_teams, all_players=all_players, data=data)
 
 
-@app.route("/player", methods=["GET", "POST"])
-def handle_player():	
-	if request.method == "GET":
-		data = {
-			"time_type": None,
-			"date_from": None,
-			"date_to": None, 
-			"season": None,
-			"location": None,
-			"conference": None,
-			"player_name": None,
-			"shot_chart": None,
-			"player_average": None,
-			"league_average": None
-		}
-
-	if request.method == "POST":
-		player_name = request.form["playerSelect"]
-		player_id = player_ids[player_name]
-
-		date_from, date_to = "", ""
-		season = SeasonNullable.default
-		time_type = request.form["timeSelect"]
-		if time_type == "Season":
-			season = request.form["seasonSelect"][:7]
-		elif time_type == "Time Period":
-			date_from = request.form["timeStart"]
-			date_to = request.form["timeEnd"]
-		elif time_type == "Career":
-			pass 
-		else:
-			raise ValueError("Invalid time type")
-
-		location_input = request.form.getlist("location")
-		if len(location_input) == 0 or len(location_input) == 2:
-			location = LocationNullable.default
-		else:
-			if location_input[0] == "home":
-				location = "Home"
-			else:
-				location = "Road"
-
-		conference_input = request.form.getlist("conference")
-		if len(conference_input) == 0 or len(conference_input) == 2:
-			conference = ConferenceNullable.default
-		else:
-			if conference_input[0] == "westOppt":
-				conference = "West"
-			else:
-				conference = "East"
-
-		player_chart, player_average, league_average = get_player_data(
-			player_id=0,
-			date_from=date_from,
-			date_to=date_to,
-			season=season,
-			season_type="Regular Season",
-			location=location,
-			vs_conference=conference,
-			context_measure_simple="FGA"
-		)
-
-		# Change text to display
-		if location == "Road":
-			location = "Away"
-
-		data = {
-			"time_type": time_type,
-			"date_from": date_from, 
-			"date_to": date_to, 
-			"season": season,
-			"location": location if location != LocationNullable.default else None,
-			"conference": conference if conference != ConferenceNullable.default else None,
-			"player_name": player_name,
-			"shot_chart": player_chart,
-			"player_average": player_average,
-			"league_average": league_average
-		}
-
-	return render_template("player.html", all_teams=all_teams, all_players=all_players, data=data)
-
 def get_team_data(
 	team_id, 
 	player_id=0, 
@@ -274,66 +191,6 @@ def get_team_data(
 	return shot_array, team_average, league_average, other_averages
 
 
-def get_player_data( 
-	player_id=0, 
-	date_from="", 
-	date_to="", 
-	season=SeasonNullable.default,
-	season_type="Regular Season",
-	location=LocationNullable.default,
-	vs_conference=ConferenceNullable.default,
-	context_measure_simple="FGA"
-	):
-	"""
-	0 GRID_TYPE
-	1 GAME_ID
-	2 GAME_EVENT_ID
-	3 PLAYER_ID
-	4 PLAYER_NAME
-	5 TEAM_ID
-	6 TEAM_NAME
-	7 PERIOD
-	8 MINUTES_REMAINING
-	9 SECONDS_REMAINING
-	10 EVENT_TYPE
-	11 ACTION_TYPE
-	12 SHOT_TYPE
-	13 SHOT_ZONE_BASIC
-	14 SHOT_ZONE_AREA
-	15 SHOT_ZONE_RANGE
-	16 SHOT_DISTANCE
-	17 LOC_X
-	18 LOC_Y
-	19 SHOT_ATTEMPTED_FLAG 
-	20 SHOT_MADE_FLAG
-	21 GAME_DATE
-	22 HTM
-	23 VTM
-	"""
-	shot_array = [] 
-	for team in all_teams:
-		curr_shot_chart = shotchartdetail.ShotChartDetail(
-			team_id=team["id"],
-			player_id=player_id,
-			date_from_nullable=date_from, 
-			date_to_nullable=date_to,
-			season_nullable=season,
-			season_type_all_star=season_type,
-			location_nullable=location,
-			vs_conference_nullable=vs_conference,
-			context_measure_simple=context_measure_simple
-		) 
-		curr_shot_array = curr_shot_chart.get_dict()["resultSets"][0]["rowSet"]
-		shot_array.extend(curr_shot_array)
-
-	# Compute team average 
-	player_average = get_team_average(convert_to_df(shot_chart.get_dict()["resultSets"][0], curr_shot_chart()["resultSets"][0]["headers"]))
-	# Compute league average 
-	league_average = get_league_average(convert_to_df(curr_shot_chart.get_dict()["resultSets"][1]))
-
-	return shot_array, player_average, league_average
-
-
 def get_team_average(df):
 	three_point_zone = ["Above the Break 3", "Backcourt", "Left Corner 3", "Right Corner 3"]
 
@@ -408,6 +265,4 @@ def convert_to_df(data, headers=None):
 
 
 if __name__ == "__main__":
-	# player_info = commonplayerinfo.CommonPlayerInfo(player_id=all_players[1]['id'])
-	# print(player_info)
 	app.run(host="0.0.0.0", port=8080)

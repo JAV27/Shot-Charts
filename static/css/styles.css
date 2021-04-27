@@ -101,6 +101,15 @@ th, td {
 	padding: 15px 0 15px 0;
 }
 
+.filter-title {
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
+
+.plot-header {
+	margin-bottom: 40px;
+}
+
 .hidden {
 	visibility: hidden;
 }
