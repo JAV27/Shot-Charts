@@ -408,17 +408,6 @@
 				   .on("mouseout", function() {
 						d3.select("#tooltip").classed("hidden", true);
 				   });
-
-				    // plot legend
-					const svg1 = d3.select("#chartLegend")
-								   .append("svg")
-								   .attr("width", 780)
-								   .attr("height", 50);
-
-					svg1.append("circle").attr("cx", 250).attr("cy", 10).attr("r", 5).style("fill", "#DC143C").attr("stroke", "black").attr("stroke-width", 1);
-					svg1.append("circle").attr("cx", 450).attr("cy", 10).attr("r", 5).style("fill", "#2E8B57").attr("stroke", "black").attr("stroke-width", 1);
-					svg1.append("text").attr("x", 265).attr("y", 10).text("Made Shot").style("font-size", "16px").attr("alignment-baseline", "middle");
-					svg1.append("text").attr("x", 465).attr("y", 10).text("Missed Shot").style("font-size", "16px").attr("alignment-baseline", "middle");
 				};
 
 				function loadShotChartMedium(playerData) {
@@ -472,6 +461,17 @@
 				};
 
 				loadShotChartSmall(shotsData);
+
+			    // Plot legend
+				const svg1 = d3.select("#chartLegend")
+							   .append("svg")
+							   .attr("width", 780)
+							   .attr("height", 50);
+
+				svg1.append("circle").attr("cx", 250).attr("cy", 10).attr("r", 5).style("fill", "#DC143C").attr("stroke", "black").attr("stroke-width", 1);
+				svg1.append("circle").attr("cx", 450).attr("cy", 10).attr("r", 5).style("fill", "#2E8B57").attr("stroke", "black").attr("stroke-width", 1);
+				svg1.append("text").attr("x", 265).attr("y", 10).text("Made Shot").style("font-size", "16px").attr("alignment-baseline", "middle");
+				svg1.append("text").attr("x", 465).attr("y", 10).text("Missed Shot").style("font-size", "16px").attr("alignment-baseline", "middle");
 
 				let filterData = shotsData;
 				$("input[name='success']").on("click", function() {
