@@ -170,10 +170,14 @@ def get_team_data(
 
 	# Compute other teams' individual averages
 	other_averages = {}
+	counter = 0
 	for other_team, other_id in team_ids.items():
 		if other_id == team_id:
 			continue 
 		else:
+			if counter == 10:
+				break
+			counter += 1
 			print(other_team)
 			other_shot_chart = shotchartdetail.ShotChartDetail(
 				team_id=other_id,
