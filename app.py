@@ -162,9 +162,11 @@ def get_team_data(
 		context_measure_simple=context_measure_simple
 	) 
 	shot_array = shot_chart.get_dict()["resultSets"][0]["rowSet"]
+	shot_array = list(filter(lambda x: x[18] >= -40 and x[18] <= 470, shot_array))
 
 	# Compute team average 
 	team_average = get_team_average(convert_to_df(shot_chart.get_dict()["resultSets"][0]))
+
 	# Compute league average 
 	league_average = get_league_average(convert_to_df(shot_chart.get_dict()["resultSets"][1]))
 
@@ -175,7 +177,7 @@ def get_team_data(
 		if other_id == team_id:
 			continue 
 		else:
-			if counter == 10:
+			if counter == 5:
 				break
 			counter += 1
 			print(other_team)

@@ -115,13 +115,8 @@
 					<div class="row mt-4">
 						<div class="col-lg-12 col-xl-6 mb-3">
 							<div id="shotChart">
-								<svg width="780" height="650" background-color="#122737">
-									<g id="shotchart">
-										<defs>
-											<pattern id="bg" patternUnits="userSpaceOnUse" width="780" height="650">
-												<img id="image-url" src="{{ url_for('static', filename='court.jpg') }}"  height="650"/>
-											</pattern>
-										</defs>
+								<svg width="700" height="658" id="shotChartSvg">
+									<g id="shotChartG">						
 									</g>
 								</svg>
 							</div>
@@ -154,7 +149,7 @@
 									{% if data["conference"] %}
 										<h5>{{ data["conference"] }} Conference</h5>
 									{% else %}
-										<h5>East and West Conferences</h5>
+										<h5>West and East Conferences</h5>
 									{% endif %}
 
 									<table class="table average-table">
@@ -185,56 +180,56 @@
 									<h3>Options and Filters</h3>
 									<h5 class="filter-title">Chart Type</h5>
 									<div class="form-check form-check-inline">
-										<input class="form-check-input" type="radio" name="inlineRadioOptions" id="inlineRadio1" value="shotChart" checked>
+										<input class="form-check-input" type="radio" name="chartType" id="inlineRadio1" value="shotChart" checked>
 										<label class="form-check-label" for="inlineRadio1">Shot Chart</label>
 									</div>
 									<div class="form-check form-check-inline">
-										<input class="form-check-input" type="radio" name="inlineRadioOptions" id="inlineRadio2" value="heatMap">
+										<input class="form-check-input" type="radio" name="chartType" id="inlineRadio2" value="heatMap">
 										<label class="form-check-label" for="inlineRadio2">Heat Map</label>
 									</div>
 
-									<h5 class="filter-title">Shot Success</h5>
-									<div class="form-check form-check-inline">
+									<h5 class="filter-title optional-filter">Shot Success</h5>
+									<div class="form-check form-check-inline optional-filter">
 										<input class="form-check-input" name="success" type="checkbox" id="positionCheckbox1" value="made" checked>
 										<label class="form-check-label" for="inlineCheckbox6">Made Shot</label>
 									</div>
-									<div class="form-check form-check-inline">
+									<div class="form-check form-check-inline optional-filter">
 										<input class="form-check-input" name="success" type="checkbox" id="positionCheckbox2" value="missed" checked>
 										<label class="form-check-label" for="inlineCheckbox7">Missed Shot</label>
 									</div>
 
-									<h5 class="filter-title">Quarter</h5>
-									<div class="form-check form-check-inline">
+									<h5 class="filter-title optional-filter">Quarter</h5>
+									<div class="form-check form-check-inline optional-filter">
 										<input class="form-check-input" name="quarter" type="checkbox" id="inlineCheckbox1" value="1" checked>
 										<label class="form-check-label" for="inlineCheckbox1">First</label>
 									</div>
-									<div class="form-check form-check-inline">
+									<div class="form-check form-check-inline optional-filter">
 										<input class="form-check-input" name="quarter" type="checkbox" id="inlineCheckbox2" value="2" checked>
 										<label class="form-check-label" for="inlineCheckbox2">Second</label>
 									</div>
-									<div class="form-check form-check-inline">
+									<div class="form-check form-check-inline optional-filter">
 										<input class="form-check-input" name="quarter" type="checkbox" id="inlineCheckbox3" value="3" checked>
 										<label class="form-check-label" for="inlineCheckbox3">Third</label>
 									</div>
-									<div class="form-check form-check-inline">
+									<div class="form-check form-check-inline optional-filter">
 										<input class="form-check-input" name="quarter" type="checkbox" id="inlineCheckbox4" value="4" checked>
 										<label class="form-check-label" for="inlineCheckbox4">Fourth</label>
 									</div>
-									<div class="form-check form-check-inline">
+									<div class="form-check form-check-inline optional-filter">
 										<input class="form-check-input" name="quarter" type="checkbox" id="inlineCheckbox5" value="5" checked>
 										<label class="form-check-label" for="inlineCheckbox5">Overtime</label>
 									</div>
 
-									<h5 class="filter-title">Shot Range</h5>
-									<div class="form-check form-check-inline">
+									<h5 class="filter-title optional-filter">Shot Range</h5>
+									<div class="form-check form-check-inline optional-filter">
 										<input class="form-check-input" name="range" type="checkbox" id="inlineCheckbox6" value="Paint" checked>
 										<label class="form-check-label" for="inlineCheckbox6">In the paint (2-PTS)</label>
 									</div>
-									<div class="form-check form-check-inline">
+									<div class="form-check form-check-inline optional-filter">
 										<input class="form-check-input" name="range" type="checkbox" id="inlineCheckbox7" value="Midrange" checked>
 										<label class="form-check-label" for="inlineCheckbox7">Mid-range (2-PTS)</label>
 									</div>
-									<div class="form-check form-check-inline">
+									<div class="form-check form-check-inline optional-filter">
 										<input class="form-check-input" name="range" type="checkbox" id="inlineCheckbox8" value="Three" checked>
 										<label class="form-check-label" for="inlineCheckbox8">Over the arc (3-PTS)</label>
 									</div>
@@ -318,48 +313,155 @@
 			};
 
 			$(function() {
-				let shotsData = {{ data["shot_chart"]|tojson }};
+				// PI number
+				const pi = Math.PI / 180;
+
+				// Shots data
+				const shotsData = {{ data["shot_chart"]|tojson }};
+
+				// Aggregate by zone
+				let aggZoneData;
+				if (shotsData) {
+					aggZoneData = aggregateZone(shotsData);
+				}
+
+				// Court dimensions
+				const courtWidth = 700;
+				const courtHeight = 658;
+
+				// 3-pts angle
+				const threeAngle = Math.atan((10 - 0.75) / 22) * 180 / Math.PI;
+
+				const arc = (radius, start, end) => {
+					const points = [...Array(30)].map((d,i) => i);
+
+					const angle = d3.scaleLinear()
+					.domain([ 0, points.length - 1 ])
+					.range([ start, end ]);
+
+					const line = d3.lineRadial()
+					.radius(radius)
+					.angle((d,i) => angle(i));
+
+					return line(points);
+				}
+
+				function drawCourt() {
+					const g = d3.select("#shotChartG")
+								.style('fill', 'none')
+								.style('stroke', '#000');
+
+					const x = d3.scaleLinear().range([0, courtWidth]).domain([-25,25]);
+					const y = d3.scaleLinear().range([0, courtHeight]).domain([0, 47]);
+
+					const basket = y(4);
+					const basketRadius = y(4.75) - basket;
+
+					// basket
+					g.append('circle')
+						.attr('r', basketRadius)
+						.attr('cx', x(0))
+						.attr('cy', y(4.75))
+
+					// backboard
+					g.append('rect')
+						.attr('x', x(-3))
+						.attr('y', basket)
+						.attr('width', x(3) - x(-3))
+						.attr('height', 1)
+
+					// outer paint
+					g.append('rect')
+						.attr('x', x(-8))
+						.attr('y', y(0))
+						.attr('width', x(8) - x(-8))
+						.attr('height', y(15) + basket)
+
+					// inner paint
+					g.append('rect')
+						.attr('x', x(-6))
+						.attr('y', y(0))
+						.attr('width', x(6) - x(-6))
+						.attr('height', y(15) + basket)
+
+					// restricted area
+					g.append('path')
+						.attr('d', arc(x(4) - x(0), 90 * pi, 270 * pi))
+						.attr('transform', `translate(${[x(0), basket]})`)
+
+					// freethrow
+					g.append('path')
+						.attr('d', arc(x(6) - x(0), 90 * pi, 270 * pi))
+						.attr('transform', `translate(${[x(0), y(15) + basket]})`)
+
+					// freethrow dotted
+					g.append('path')
+						.attr('d', arc(x(6) - x(0), -90 * pi, 90 * pi))
+						.attr('stroke-dasharray', '3,3')
+						.attr('transform', `translate(${[x(0), y(15) + basket]})`)
+
+					// 3-point lines
+					g.append('line')
+						.attr('x1', x(-21.9)) // lines up the stroke a little better than the true 22 ft.
+						.attr('x2', x(-21.9))
+						.attr('y2', y(14))
+
+					g.append('line')
+						.attr('x1', x(21.9))
+						.attr('x2', x(21.9))
+						.attr('y2', y(14))
+
+					// 3-point arc
+					g.append('path')
+						.attr('d', arc(y(23.75), (threeAngle + 90) * pi, (270 - threeAngle) * pi))
+						.attr('transform', `translate(${[x(0), basket + basketRadius]})`)
+
+					// half court outer
+					g.append('path')
+						.attr('d', arc(x(6) - x(0), -90 * pi, 90 * pi))
+						.attr('transform', `translate(${[x(0), y(47)]})`)
+
+					// half court inner
+					g.append('path')
+						.attr('d', arc(x(2) - x(0), -90 * pi, 90 * pi))
+						.attr('transform', `translate(${[x(0), y(47)]})`)
+
+					// half court line
+					g.append('line')
+						.attr('x1', x(-25))
+						.attr('x2', x(25))
+						.attr('y1', y(47))
+						.attr('y2', y(47))
+
+					// boundaries
+					g.append('rect')
+						.style('stroke', '#000')
+						.attr('x', x(-25))
+						.attr('y', y(0))
+						.attr('width', x(25))
+						.attr('height', y(47))
+				}
 
 				function loadShotChartSmall(playerData) {
-					var max = { 
-						x: 780, 
-						y: 650
-					};
-					var svg = d3.select("#shotChart").html("");
-					svg = d3.select("#shotChart").append("svg:svg")
-					.attr("width", max.x)
-					.attr("height", max.y)
-					.attr("background-color", "#122737")
-					.append("g")
-					.attr("id", "shotchart");
+					let svg = d3.select("#shotChart")
+								.html("")
+								.append("svg")
+								.attr("width", courtWidth)
+								.attr("height", courtHeight)
+								.attr("background-color", "#122737")
+								.attr("id", "shotChartSvg")
+								.append("g")
+								.attr("id", "shotChartG");
 
-					var courtUrl = "/court.jpg";
-					svg.append("svg:defs")
-					.append("svg:pattern")
-					.attr("id", "bg")
-					.attr('patternUnits', 'userSpaceOnUse')
-					.attr("width", max.x)
-					.attr("height", max.y)
-					.append("svg:image")
-					.attr("id","image-url")
-					.attr("xlink:href", courtUrl)
-					.attr("width", max.x)
-					.attr("height", max.y);
-					
-					svg.append("rect")
-					.attr("x", "0")
-					.attr("y", "0")
-					.attr("width", max.x)
-					.attr("height", max.y)
-					.attr("fill", "url(#bg)");
+					drawCourt();
 				  
-					var xScale = d3.scaleLinear()
-					.domain([-250, 250])
-					.range([0, 780]);
+					const xScale = d3.scaleLinear()
+								     .domain([-250, 250])
+								     .range([0, courtWidth]);
 				
-					var yScale = d3.scaleLinear()
-					.domain([-1,0, -150])
-					.range([590,589, 371]);
+					const yScale = d3.scaleLinear()
+					                 .domain([-40, 470])
+								     .range([0, courtHeight + 80]);
 				
 					var colorValue = function(d) {
 						if(d[10] === "Missed Shot") {
@@ -370,11 +472,11 @@
 					}
 
 					var xValue = function(d) {
-						return xScale(-d[17]);
+						return xScale(d[17]);
 					}
 				
 					var yValue = function(d) {
-						return (yScale(-d[18]));
+						return yScale(d[18]);
 					}
 
 					var classByShot = function(d) {
@@ -386,92 +488,392 @@
 						}
 					}
 
-					var div = d3.select("body").append("div")	
-										    .attr("class", "tooltip")				
-										    .style("opacity", 0);
 					d3.selectAll('dot').remove();
-					var node = svg.selectAll("dot").data(playerData)
-					node.enter()
-					.append("svg:circle")
-					.attr("r", 5)
-					.attr("cx", function(d) { return  xValue(d);})
-					.attr("cy", function(d) { return yValue(d);})
-					.attr("class", function(d) { return classByShot(d);})
-					.style("fill", function(d) { return colorValue(d);})
-					.on("mouseover", function(e, d) {
-						d3.select("#tooltip")			
-							.select("#shotInfo")
-							.html("<span><strong>" + d[4] + "</strong>, " + d[10] + ", Quarter: " + d[7] + ", Distance: " + d[16] + "ft.</span>");
-				   	
-						d3.select("#tooltip").classed("hidden", false);
-				   })
-				   .on("mouseout", function() {
-						d3.select("#tooltip").classed("hidden", true);
-				   });
+
+					var node = svg.selectAll("dot")
+								.data(playerData)
+								.enter()
+								.append("svg:circle")
+								.attr("r", 5)
+								.attr("cx", function(d) { return  xValue(d);})
+								.attr("cy", function(d) { return yValue(d);})
+								.attr("class", function(d) { return classByShot(d);})
+								.style("fill", function(d) { return colorValue(d);})
+								.on("mouseover", function(e, d) {
+									d3.select("#tooltip")			
+										.select("#shotInfo")
+										.html("<span><strong>" + d[4] + "</strong>, " + d[10] + ", Quarter: " + d[7] + ", Distance: " + d[16] + "ft.</span>");
+							   	
+									d3.select("#tooltip").classed("hidden", false);
+							   })
+							   .on("mouseout", function() {
+									d3.select("#tooltip").classed("hidden", true);
+							   });
 				};
 
-				function loadShotChartMedium(playerData) {
-					var max = { 
-						x: 780, 
-						y: 650
-					};
-					var svg = d3.select("#shotChart").html("");
-					svg = d3.select("#shotChart").append("svg:svg")
-					.attr("width", max.x)
-					.attr("height", max.y)
-					.attr("background-color", "#122737")
-					.append("g")
-					.attr("id", "shotchart");
+				function loadShotChartMedium(data) {
+					let dataObj = {} 
+					data.forEach(elem => {
+						dataObj[elem["name"]] = {};
+						for (let k in elem) {
+							dataObj[elem["name"]][k] = elem[k];
+						};
+						dataObj[elem["name"]]["PCT"] = elem["FGM"] / elem["FGA"];
+					});
+					console.log(dataObj);
 
-					var courtUrl = "/court.jpg";
-					svg.append("svg:defs")
-					.append("svg:pattern")
-					.attr("id", "bg")
-					.attr('patternUnits', 'userSpaceOnUse')
-					.attr("width", max.x)
-					.attr("height", max.y)
-					.append("svg:image")
-					.attr("id","image-url")
-					.attr("xlink:href", courtUrl)
-					.attr("width", max.x)
-					.attr("height", max.y);
-					
+					let svg = d3.select("#shotChart")
+								.html("")
+								.append("svg")
+								.attr("width", courtWidth)
+								.attr("height", courtHeight)
+								.attr("background-color", "#122737")
+								.attr("id", "shotChartSvg")
+								.append("g")
+								.attr("id", "shotChartG");
+
+					const x = d3.scaleLinear().range([0, courtWidth]).domain([-25,25]);
+					const y = d3.scaleLinear().range([0, courtHeight]).domain([0, 47]);
+
+					const basket = y(4);
+					const basketRadius = y(4.75) - basket;
+
+					const colorScale = d3.scaleSequentialQuantile(d3.interpolateRdYlGn)
+										 .domain([0, 0.30, 0.35, 0.4, 0.45, 0.50, 0.55, 0.6, 0.65, 0.70, 1])
+
+
+					let currFGM, currFGA, currPCT;
+
+					// Above the break 3 - Center
+					currFGM = dataObj["Above the Break 3"]["Center(C)"]["FGM"];
+					currFGA = dataObj["Above the Break 3"]["Center(C)"]["FGA"];
+					currPCT = currFGM / currFGA;
 					svg.append("rect")
-					.attr("x", "0")
-					.attr("y", "0")
-					.attr("width", max.x)
-					.attr("height", max.y)
-					.attr("fill", "url(#bg)");
+					   .attr("x", x(-25))
+					   .attr("y", y(0))
+					   .attr("width", x(25) - x(-25))
+					   .attr("height", y(47) - y(0))
+					   .style("fill", colorScale(currPCT));
 
+					svg.append("text")
+					   .attr("x", x(0))
+					   .attr("y", y(35))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html(currFGM + " / " + currFGA + " (" + (Math.round(currPCT * 100, 2)) + "%)");
+
+					function drawPolygon(points) {
+						return points.map(function(d) {
+					    	return d.join(",");
+						}).join(" ");
+					}
+
+					// Above the break 3 - Left Center
+					const leftCenterThree = [[x(-8), y(27)], [x(-14), y(47)], [x(-25), y(47)], [x(-25), y(0)], [x(-8), y(0)]];
+					currFGM = dataObj["Above the Break 3"]["Left Side Center(LC)"]["FGM"];
+					currFGA = dataObj["Above the Break 3"]["Left Side Center(LC)"]["FGA"];
+					currPCT = currFGM / currFGA;
+					svg.append("polygon")
+					   .attr("points", drawPolygon(leftCenterThree))
+					   .style("fill", colorScale(currPCT));
+
+					svg.append("text")
+					   .attr("x", x(-18))
+					   .attr("y", y(30))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html(currFGM + " / " + currFGA + " (" + (Math.round(currPCT * 100, 2)) + "%)");
+
+					// Above the break 3 - Right Center
+					const rightCenterThree = [[x(8), y(27)], [x(14), y(47)], [x(25), y(47)], [x(25), y(0)], [x(8), y(0)]];
+					currFGM = dataObj["Above the Break 3"]["Right Side Center(RC)"]["FGM"];
+					currFGA = dataObj["Above the Break 3"]["Right Side Center(RC)"]["FGA"];
+					currPCT = currFGM / currFGA;
+					svg.append("polygon")
+					   .attr("points", drawPolygon(rightCenterThree))
+					   .style("fill", colorScale(currPCT));
+
+					svg.append("text")
+					   .attr("x", x(18))
+					   .attr("y", y(30))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html(currFGM + " / " + currFGA + " (" + (Math.round(currPCT * 100, 2)) + "%)");
+
+					// Mid-range - Left Center
+					currFGM = dataObj["Mid-Range"]["Left Side Center(LC)"]["FGM"];
+					currFGA = dataObj["Mid-Range"]["Left Side Center(LC)"]["FGA"];
+					currPCT = currFGM / currFGA;
+					svg.append("path")
+					   .attr("d", arc(y(23.75), (threeAngle + 135) * pi, (360 - threeAngle) * pi))
+					   .attr('transform', `translate(${[x(0), basket + basketRadius]})`)
+					   .style("fill", colorScale(currPCT));
+
+					svg.append("text")
+					   .attr("x", x(-12))
+					   .attr("y", y(19))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html(currFGM + " / " + currFGA + " (" + (Math.round(currPCT * 100, 2)) + "%)");
+
+					// Mid-range - Right Center
+					currFGM = dataObj["Mid-Range"]["Right Side Center(RC)"]["FGM"];
+					currFGA = dataObj["Mid-Range"]["Right Side Center(RC)"]["FGA"];
+					currPCT = currFGM / currFGA;
+					svg.append("path")
+					   .attr("d", arc(y(23.75), (threeAngle + 135) * pi, (0 - threeAngle) * pi))
+					   .attr('transform', `translate(${[x(0), basket + basketRadius]})`)
+					   .style("fill", colorScale(currPCT));
+
+					svg.append("text")
+					   .attr("x", x(12))
+					   .attr("y", y(19))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html(currFGM + " / " + currFGA + " (" + (Math.round(currPCT * 100, 2)) + "%)");
+
+					// Left corner 3
+					currFGM = dataObj["Left Corner 3"]["FGM"];
+					currFGA = dataObj["Left Corner 3"]["FGA"];
+					currPCT = currFGM / currFGA;
 					svg.append("rect")
-					   .attr("x", 4)
-					   .attr("y", 455)
-					   .attr("width", 46)
-					   .attr("height", max.y - 455 - 4)
-					   .style("fill", "red");
+					   .attr("x", x(-25))
+					   .attr("y", y(0))
+					   .attr("width", x(25) - x(21.9))
+					   .attr("height", y(14))
+					   .style("fill", colorScale(currPCT));
 
+					svg.append("text")
+					   .attr("x", x(-23.5))
+					   .attr("y", y(4))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html(currFGM);
+					svg.append("text")
+					   .attr("x", x(-23.5))
+					   .attr("y", y(6))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html("/");
+					svg.append("text")
+					   .attr("x", x(-23.5))
+					   .attr("y", y(8))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html(currFGA);
+					svg.append("text")
+					   .attr("x", x(-23.5))
+					   .attr("y", y(10))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html("(" + (Math.round(currPCT * 100, 2)) + "%)");
+
+					// Right corner 3
+					currFGM = dataObj["Right Corner 3"]["FGM"];
+					currFGA = dataObj["Right Corner 3"]["FGA"];
+					currPCT = currFGM / currFGA;
 					svg.append("rect")
-					   .attr("x", max.x - 51)
-					   .attr("y", 455)
-					   .attr("width", 46)
-					   .attr("height", max.y - 455 - 4)
-					   .style("fill", "blue");
+					   .attr("x", x(21.9))
+					   .attr("y", y(0))
+					   .attr("width", x(25) - x(21.9))
+					   .attr("height", y(14))
+					   .style("fill", colorScale(currPCT));
 
-					const outPoints = [[]]
+					svg.append("text")
+					   .attr("x", x(23.5))
+					   .attr("y", y(4))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html(currFGM);
+					svg.append("text")
+					   .attr("x", x(23.5))
+					   .attr("y", y(6))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html("/");
+					svg.append("text")
+					   .attr("x", x(23.5))
+					   .attr("y", y(8))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html(currFGA);
+					svg.append("text")
+					   .attr("x", x(23.5))
+					   .attr("y", y(10))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html("(" + (Math.round(currPCT * 100, 2)) + "%)");
+
+					// Mid-range - Left
+					const midRangeLeft = [[x(-21.9), y(14)], [x(-8), y(11)], [x(-8), y(0)], [x(-21.9), y(0)]];
+					currFGM = dataObj["Mid-Range"]["Left Side(L)"]["FGM"];
+					currFGA = dataObj["Mid-Range"]["Left Side(L)"]["FGA"];
+					currPCT = currFGM / currFGA;
+					svg.append("polygon")
+					   .attr("points", drawPolygon(midRangeLeft))
+					   .style("fill", colorScale(currPCT));
+
+					svg.append("text")
+					   .attr("x", x(-14))
+					   .attr("y", y(6))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html(currFGM + " / " + currFGA + " (" + (Math.round(currPCT * 100, 2)) + "%)");
+
+				   // Mid-range - Right
+					const midRangeRight = [[x(21.9), y(14)], [x(8), y(11)], [x(8), y(0)], [x(21.9), y(0)]];
+					currFGM = dataObj["Mid-Range"]["Right Side(R)"]["FGM"];
+					currFGA = dataObj["Mid-Range"]["Right Side(R)"]["FGA"];
+					currPCT = currFGM / currFGA;
+					svg.append("polygon")
+					   .attr("points", drawPolygon(midRangeRight))
+					   .style("fill", colorScale(currPCT));
+
+					svg.append("text")
+					   .attr("x", x(14))
+					   .attr("y", y(6))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html(currFGM + " / " + currFGA + " (" + (Math.round(currPCT * 100, 2)) + "%)");
+
+					// Mid-range - Center
+					currFGM = dataObj["Mid-Range"]["Center(C)"]["FGM"];
+					currFGA = dataObj["Mid-Range"]["Center(C)"]["FGA"];
+					currPCT = currFGM / currFGA;
+					svg.append("path")
+					   .attr("d", arc(y(23.75), (threeAngle + 135) * pi, (225 - threeAngle) * pi))
+					   .attr('transform', `translate(${[x(0), basket + basketRadius]})`)
+					   .style("stroke", "none")
+					   .style("fill", colorScale(currPCT));
+
+					const midRangeCenter = [[x(9), y(26.75)], [x(6), y(15) + basket], [x(-6), y(15) + basket], [x(-9), y(26.75)]];
+					svg.append("polygon")
+					   .attr("points", drawPolygon(midRangeCenter))
+					   .style("stroke", "none")
+					   .style("fill", colorScale(currPCT));
+
+					svg.append("text")
+					   .attr("x", x(0))
+					   .attr("y", y(21))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html(currFGM + " / " + currFGA + " (" + (Math.round(currPCT * 100, 2)) + "%)");
+
+					svg.append("line")
+					   .attr("x1", x(9))
+					   .attr("y1", y(26.75))
+					   .attr("x2", x(6))
+					   .attr("y2", y(15) + basket)
+					   .style("stroke", "#000");
+
+					svg.append("line")
+					   .attr("x1", x(-9))
+					   .attr("y1", y(26.75))
+					   .attr("x2", x(-6))
+					   .attr("y2", y(15) + basket)
+					   .style("stroke", "#000");
+
+					// Paint-Area
+					currFGM = dataObj["In The Paint (Non-RA)"]["FGM"];
+					currFGA = dataObj["In The Paint (Non-RA)"]["FGA"];
+					currPCT = currFGM / currFGA;
+					svg.append("rect")
+					   .attr('x', x(-8))
+					   .attr('y', y(0))
+					   .attr('width', x(8) - x(-8))
+					   .attr('height', y(15) + basket)
+					   .style("fill", colorScale(currPCT));
+
+					svg.append("text")
+					   .attr("x", x(0))
+					   .attr("y", y(11.5))
+					   .style("font-size", "16px")
+					   .style("text-anchor", "middle")
+					   .html(currFGM + " / " + currFGA + " (" + (Math.round(currPCT * 100, 2)) + "%)");
+
+					// Restricted area
+					currFGM = dataObj["Restricted Area"]["FGM"];
+					currFGA = dataObj["Restricted Area"]["FGA"];
+					currPCT = currFGM / currFGA;
+					svg.append("path")
+					   .attr("d", arc(x(4) - x(0), 90 * pi, 270 * pi))
+					   .attr("transform", `translate(${[x(0), basket]})`)
+					   .style("fill", colorScale(dataObj["Restricted Area"]["PCT"]));
+
+					svg.append("text")
+					   .attr("x", x(0))
+					   .attr("y", y(6.5))
+					   .style("font-size", "10px")
+					   .style("text-anchor", "middle")
+					   .html(currFGM + " / " + currFGA + " (" + (Math.round(currPCT * 100, 2)) + "%)");
+
+					drawCourt();
 				};
-
+				
 				loadShotChartSmall(shotsData);
+				plotChartLegend();
 
-			    // Plot legend
-				const svg1 = d3.select("#chartLegend")
-							   .append("svg")
-							   .attr("width", 780)
-							   .attr("height", 50);
+				$("input[name='chartType']").on("click", function() {
+					if (this.value === "shotChart") {
+						loadShotChartSmall(shotsData);
+						plotChartLegend();
+						$(".optional-filter").show();
+					} else {
+						loadShotChartMedium(aggZoneData);
+						plotHeatMapLegend();
+						$(".optional-filter").hide();
+					};
+				});
 
-				svg1.append("circle").attr("cx", 250).attr("cy", 10).attr("r", 5).style("fill", "#DC143C").attr("stroke", "black").attr("stroke-width", 1);
-				svg1.append("circle").attr("cx", 450).attr("cy", 10).attr("r", 5).style("fill", "#2E8B57").attr("stroke", "black").attr("stroke-width", 1);
-				svg1.append("text").attr("x", 265).attr("y", 10).text("Made Shot").style("font-size", "16px").attr("alignment-baseline", "middle");
-				svg1.append("text").attr("x", 465).attr("y", 10).text("Missed Shot").style("font-size", "16px").attr("alignment-baseline", "middle");
+			    function plotChartLegend() {
+					const svg = d3.select("#chartLegend")
+								  .html("")
+								  .append("svg")
+								  .attr("width", courtWidth)
+								  .attr("height", 50);
+
+					svg.append("circle").attr("cx", 300).attr("cy", 10).attr("r", 5).style("fill", "#DC143C").attr("stroke", "black").attr("stroke-width", 1);
+					svg.append("circle").attr("cx", 480).attr("cy", 10).attr("r", 5).style("fill", "#2E8B57").attr("stroke", "black").attr("stroke-width", 1);
+					svg.append("text").attr("x", 315).attr("y", 10).text("Made Shot").style("font-size", "16px").attr("alignment-baseline", "middle");
+					svg.append("text").attr("x", 495).attr("y", 10).text("Missed Shot").style("font-size", "16px").attr("alignment-baseline", "middle");
+				}
+
+				function plotHeatMapLegend() {
+					const svg = d3.select("#chartLegend")
+								  .html("")
+								  .append("svg")
+								  .attr("width", courtWidth)
+								  .attr("height", 50);
+
+					const colorScale = d3.scaleSequentialQuantile(d3.interpolateRdYlGn)
+										 .domain([0, 0.30, 0.35, 0.4, 0.45, 0.50, 0.55, 0.6, 0.65, 0.70, 1])
+
+					const legendData = [
+						["<30%", 0, 30], ["30-34%", 30, 35], ["35-39%", 35, 40],
+						["40-44%", 40, 45], ["45-49%", 45, 50], ["50-54%", 50, 55], 
+						["55-59%", 55, 60], ["60-64%", 60, 65], ["65-69%", 65, 70], [">70%", 70, 100]
+					];
+
+					svg.append("g")
+					   .selectAll("rect")
+					   .data(legendData)
+					   .join("rect")
+					   .attr("x", (d, i) => 248 + i * 37)
+					   .attr("y", 10)
+					   .attr("width", 35)
+					   .attr("height", 10)
+					   .attr("fill", (d, i) => colorScale((d[2] + d[1]) / 2 / 100));
+					
+					svg.append("g")
+					   .selectAll("text")
+					   .data(legendData)
+					   .join("text")
+					   .attr("x", (d, i) => 265 + i * 37)
+					   .attr("y", 35)
+					   .text(d => d[0])
+					   .style("font-size", "9px")
+					   .style("text-anchor", "middle");
+				}
 
 				let filterData = shotsData;
 				$("input[name='success']").on("click", function() {
@@ -490,22 +892,39 @@
 				});
 
 				function aggregateZone(data) {
-					let column = 13;
+					const zoneCol = 13;
+					const areaCol = 14;
 
 					function f(acc, e) {
-						if (e[column] in acc) {
-							acc[e[column]]["FGA"]++;
+						if (e[zoneCol] in acc) {
+							acc[e[zoneCol]]["FGA"]++;
+
+							if (e[areaCol] in acc[e[zoneCol]]) {
+								acc[e[zoneCol]][e[areaCol]]["FGA"]++;
+							} else {
+								acc[e[zoneCol]][e[areaCol]] = {
+									"FGA": 1,
+									"FGM": 0
+								}
+							}
+
 							if (e[10] == "Made Shot") {
-								acc[e[column]]["FGM"]++;
+								acc[e[zoneCol]]["FGM"]++;
+								acc[e[zoneCol]][e[areaCol]]["FGM"]++;
 							}
 						} else {
-							acc[e[column]] = {
-								"name": e[column],
+							acc[e[zoneCol]] = {
+								"name": e[zoneCol],
+								"FGA": 1,
+								"FGM": 0
+							}
+							acc[e[zoneCol]][e[areaCol]] = {
 								"FGA": 1,
 								"FGM": 0
 							}
 							if (e[10] == "Made Shot") {
-								acc[e[column]]["FGM"]++;
+								acc[e[zoneCol]]["FGM"]++;
+								acc[e[zoneCol]][e[areaCol]]["FGM"]++;
 							}
 						}
 						return acc;

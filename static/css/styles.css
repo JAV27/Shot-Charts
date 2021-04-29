@@ -39,6 +39,11 @@ main {
 	display: block;
 }
 
+#shotChartSvg {
+	display: block;
+	margin: auto;
+}
+
 .form-row {
 	margin-top: 10px;
 }
