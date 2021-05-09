@@ -1,0 +1,10 @@
+1. Open terminal in project directory
+2. Run these commands to install necessary dependencies
+    a.pip install nba-api
+    b.pip install flask
+    c.pip install pandas
+    d.pip install numpy
+    e.pip install json
+    f.pip install os
+3.Run “flask run”
+4.Go to localhost:5000/team
